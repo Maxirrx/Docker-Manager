@@ -11,7 +11,7 @@ import (
 func ConnectDB() (*bun.DB, error) {
 
 	sqldb := sql.OpenDB(pgdriver.NewConnector(
-		pgdriver.WithDSN("postgres://apiculter:password@localhost:5432/API-culter?sslmode=disable"),
+		pgdriver.WithDSN("postgres://postgres:exemple@localhost:5433/db_api_culteur?sslmode=disable"),
 	))
 
 	db := bun.NewDB(sqldb, pgdialect.New())

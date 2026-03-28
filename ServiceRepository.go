@@ -46,3 +46,48 @@ func (r *ServiceRepository) FindServiceByUUID(ctx context.Context, uuid string) 
 	}
 	return service, nil
 }
+
+func (r *ServiceRepository) GetAllService(ctx context.Context) ([]Service, error) {
+	services := []Service{}
+
+	err := r.DB.NewSelect().
+		Model(&services).
+		Scan(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return services, nil
+}
+
+func(r *ServiceRepository) MonitoringSave(ctx context.Context, measure Measure) error {
+	_, err := r.DB.NewInsert().
+	Model(measure).
+	Exec(ctx)
+
+	return err
+}
+
+func(r *ServiceRepository) GetMonitoringID(ctx context.Context,uuidService string)(error, int, int){
+	var ram map[string]interface{}
+	err := r.DB.NewSelect().
+		TableExpr("monitorings_services").
+    	Column("id").
+    	Where("monitoring_id = ?", 1).
+		Where("service_uuid = ?", uuidService).
+    	Scan(ctx, &ram)
+	if err != nil {
+		return err, 0, 0
+	}
+	var cpu map[string]interface{}
+	err = r.DB.NewSelect().
+		TableExpr("monitorings_services").
+    	Column("id").
+    	Where("monitoring_id = ?", 2).
+		Where("service_uuid = ?", uuidService).
+    	Scan(ctx, &cpu)
+	if err != nil {
+		return err, 0, 0
+	}
+	return nil, ram["id"].(int), cpu["id"].(int)
+}
