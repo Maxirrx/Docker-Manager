@@ -4,7 +4,7 @@ import (
 	"context"
 
 
-	"github.com/docker/docker/api/types"
+	//"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/events"
 	"github.com/docker/docker/api/types/filters"
@@ -306,13 +306,13 @@ msgs, errs := cli.Events(context.Background(), events.ListOptions{
 				if err != nil {
 					return err
 					continue
-				}
+					}
 
-				service.StatusId = 4
+					service.StatusId = 4
 
-				err = repo.UpdateService(ctx, service)
-				if err != nil {
-					return err
+					err = repo.UpdateService(ctx, service)
+					if err != nil {
+						return err
 				}
 			}
 
@@ -323,28 +323,41 @@ msgs, errs := cli.Events(context.Background(), events.ListOptions{
 }
 
 
-func GetAllDocker() []types.Container {
+func GetAllDocker()  {
 	cli, err := NewDockerClient()
 	if err != nil {
-		return err
+		panic(err)
 	}
 
 	ctx := context.Background()
 	var repo ServiceRepository
-	containerDB := repo.GetAllService(ctx)
-
+	containersDB, err := repo.GetAllService(ctx)
+	if err != nil{
+		panic(err)
+	}
+	var containersDocker []Service
 	containers, err := cli.ContainerList(context.Background(), container.ListOptions{})
 	if err != nil {
-		return err
+		panic(err)
 	}
 	for _, c := range containers{
     	if _, ok := c.Labels["CssSexy"]; ok{
-			for _, cdb := range containerDB{
-				if c.ID == cdb.Uuid{
-					
-				}
+
+			projectId := 0
+            if val, ok := c.Labels["project"]; ok {
+                projectId, _ = strconv.Atoi(val)
+            }
+
+			const service = Service {
+				Uuid: c.ID,
+				Image: c.Image,
+				StartedSince : time.Unix(c.Created, 0).Format("2006-01-02 15:04:05"),
+				Name:      c.Names[0],
+                ProjectId: projectId,
 			}
+
+			containersDocker = append(containersDocker, service)
 		}
 	}
-	return containers
+	fmt.Println(containersDocker, containersDB)
 }
