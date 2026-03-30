@@ -415,7 +415,7 @@ func GetAllDocker() {
 			projectId, _ = strconv.Atoi(val)
 		}
 		
-		service = Service{
+		service := Service{
 			Uuid:         c.ID,
 			Image:        c.Image,
 			StartedSince: debut,
