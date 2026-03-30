@@ -399,7 +399,7 @@ func GetAllDocker() {
         if _, ok := c.Labels["CssSexy"]; !ok {
             continue
         }
-
+		fmt.Println("1")
 		var ports []Port
 
 		for _, port := range c.Ports{
@@ -421,8 +421,8 @@ if inspect.State.StartedAt != "" {
     if err == nil {
         debut = t.Format("2006-01-02 15:04:05")
     }
-}
-
+}	
+fmt.Println("2")
         projectId := 0
         if val, ok := c.Labels["project"]; ok {
             projectId, _ = strconv.Atoi(val)
@@ -445,7 +445,7 @@ if inspect.State.StartedAt != "" {
         panic(err)
     }
 
-
+fmt.Println("3")
     for _, cdb := range containersDB {
         docker, exists := containersDocker[cdb.Uuid]
         if !exists {
@@ -455,7 +455,7 @@ if inspect.State.StartedAt != "" {
 			}
 			continue
         }
-
+fmt.Println("4")
         if docker.Image == cdb.Image && docker.StartedSince == cdb.StartedSince {
             continue
         }
@@ -465,5 +465,4 @@ if inspect.State.StartedAt != "" {
             panic(err)
         }
     }
-
 }
