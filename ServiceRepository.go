@@ -26,8 +26,7 @@ func (r *ServiceRepository) Create(ctx context.Context, service *Service) error 
     _, err = r.DB.NewInsert().
         Model(&monitorings).
         Exec(ctx)
-		fmt.Println("insert monitoring err:", err)
-		fmt.Println(monitorings)
+
     return err
 }
 
