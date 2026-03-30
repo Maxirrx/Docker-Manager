@@ -28,23 +28,23 @@ func serviceActionHandler(w http.ResponseWriter, r *http.Request) {
 
 	parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/services/"), "/")
 
-    if len(parts) == 1 && parts[0] == "create" && r.Method == http.MethodPost {
-        var service Service
-        if err := json.NewDecoder(r.Body).Decode(&service); err != nil {
-            jsonResponse(w, Result{Success: false, Message: "body invalide"})
-            return
-        }
-        jsonResponse(w, CreateService(service))
-        return
-    }
+	if len(parts) == 1 && parts[0] == "create" && r.Method == http.MethodPost {
+		var service Service
+		if err := json.NewDecoder(r.Body).Decode(&service); err != nil {
+			jsonResponse(w, Result{Success: false, Message: "body invalide"})
+			return
+		}
+		jsonResponse(w, CreateService(service))
+		return
+	}
 
-    if len(parts) < 2 {
-        http.Error(w, "route invalide", http.StatusBadRequest)
-        return
-    }
+	if len(parts) < 2 {
+		http.Error(w, "route invalide", http.StatusBadRequest)
+		return
+	}
 
-    uuid := parts[0]
-    action := parts[1]
+	uuid := parts[0]
+	action := parts[1]
 
 	switch r.Method {
 	case http.MethodPost:
@@ -72,9 +72,9 @@ func serviceActionHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func serviceMonitoringHandler(w http.ResponseWriter, r *http.Request) {
-    if err := GetMonitoring(); err != nil {
-        jsonResponse(w, Result{Success: false, Message: err.Error()})
-        return
-    }
-    jsonResponse(w, Result{Success: true, Message: "monitoring sauvegardé"})
+	if err := GetMonitoring(); err != nil {
+		jsonResponse(w, Result{Success: false, Message: err.Error()})
+		return
+	}
+	jsonResponse(w, Result{Success: true, Message: "monitoring sauvegardé"})
 }

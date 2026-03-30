@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
-	"github.com/uptrace/bun"
 	"fmt"
+	"github.com/uptrace/bun"
 )
 
 type ServiceRepository struct {
@@ -11,29 +11,29 @@ type ServiceRepository struct {
 }
 
 func (r *ServiceRepository) Create(ctx context.Context, service *Service) error {
-    _, err := r.DB.NewInsert().
-        Model(service).
-        Exec(ctx)
-    if err != nil {
-        return err
-    }
+	_, err := r.DB.NewInsert().
+		Model(service).
+		Exec(ctx)
+	if err != nil {
+		return err
+	}
 
-    monitorings := []MonitoringService{
-        {MonitoringID: 1, ServiceUUID: service.Uuid, MinValue: 0, MaxValue: 100},
-        {MonitoringID: 2, ServiceUUID: service.Uuid, MinValue: 0, MaxValue: 100},
-    }
+	monitorings := []MonitoringService{
+		{MonitoringID: 1, ServiceUUID: service.Uuid, MinValue: 0, MaxValue: 100},
+		{MonitoringID: 2, ServiceUUID: service.Uuid, MinValue: 0, MaxValue: 100},
+	}
 
-    _, err = r.DB.NewInsert().
-        Model(&monitorings).
-        Exec(ctx)
+	_, err = r.DB.NewInsert().
+		Model(&monitorings).
+		Exec(ctx)
 
-    return err
+	return err
 }
 
 func (r *ServiceRepository) UpdateService(ctx context.Context, service *Service) error {
 	_, err := r.DB.NewUpdate().
 		Model(service).
-		Where("uuid = ?", service.Uuid). 
+		Where("uuid = ?", service.Uuid).
 		Exec(ctx)
 
 	return err
@@ -75,32 +75,32 @@ func (r *ServiceRepository) GetAllServices(ctx context.Context) ([]Service, erro
 	return services, nil
 }
 
-func(r *ServiceRepository) MonitoringSave(ctx context.Context, measure Measure) error {
+func (r *ServiceRepository) MonitoringSave(ctx context.Context, measure Measure) error {
 	_, err := r.DB.NewInsert().
-	Model(&measure).
-	Exec(ctx)
+		Model(&measure).
+		Exec(ctx)
 
 	return err
 }
 
-func(r *ServiceRepository) GetMonitoringID(ctx context.Context,uuidService string)(error, int, int){
+func (r *ServiceRepository) GetMonitoringID(ctx context.Context, uuidService string) (error, int, int) {
 	var ram map[string]interface{}
 	err := r.DB.NewSelect().
 		TableExpr("monitorings_services").
-    	Column("id").
-    	Where("monitoring_id = ?", 1).
+		Column("id").
+		Where("monitoring_id = ?", 1).
 		Where("service_uuid = ?", uuidService).
-    	Scan(ctx, &ram)
+		Scan(ctx, &ram)
 	if err != nil {
 		return err, 0, 0
 	}
 	var cpu map[string]interface{}
 	err = r.DB.NewSelect().
 		TableExpr("monitorings_services").
-    	Column("id").
-    	Where("monitoring_id = ?", 2).
+		Column("id").
+		Where("monitoring_id = ?", 2).
 		Where("service_uuid = ?", uuidService).
-    	Scan(ctx, &cpu)
+		Scan(ctx, &cpu)
 	if err != nil {
 		return err, 0, 0
 	}

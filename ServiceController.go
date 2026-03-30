@@ -15,7 +15,7 @@ func StartService(uuid string) Result {
 }
 func RestartService(uuid string) Result {
 	err := RestartDocker(uuid)
-		if err != nil {
+	if err != nil {
 		return Result{
 			Success: false,
 			Message: err.Error(),
@@ -29,7 +29,7 @@ func RestartService(uuid string) Result {
 
 func StopService(uuid string) Result {
 	err := StopDocker(uuid)
-		if err != nil {
+	if err != nil {
 		return Result{
 			Success: false,
 			Message: err.Error(),
@@ -41,10 +41,9 @@ func StopService(uuid string) Result {
 	}
 }
 
-
 func DeleteService(uuid string) Result {
 	err := DeleteDocker(uuid)
-		if err != nil {
+	if err != nil {
 		return Result{
 			Success: false,
 			Message: err.Error(),
@@ -58,7 +57,7 @@ func DeleteService(uuid string) Result {
 
 func CreateService(service Service) Result {
 	err := CreateDocker(&service)
-		if err != nil {
+	if err != nil {
 		return Result{
 			Success: false,
 			Message: err.Error(),
@@ -72,7 +71,7 @@ func CreateService(service Service) Result {
 
 func Monitoring() Result {
 	err := GetMonitoring()
-		if err != nil {
+	if err != nil {
 		return Result{
 			Success: false,
 			Message: err.Error(),
