@@ -19,7 +19,7 @@ func (r *ServiceRepository) Create(ctx context.Context, service *Service) error 
 
 	monitorings := []MonitoringService{
 		{MonitoringID: 1, ServiceUUID: service.Uuid, MinValue: 0, MaxValue: 100},
-		{MonitoringID: 2, ServiceUUID: service.Uuid, MinValue: 0, MaxValue: 100},
+		{MonitoringID: 2, ServiceUUID: service.Uuid, MinValue: 0, MaxValue: 1000},
 	}
 
 	_, err = r.DB.NewInsert().

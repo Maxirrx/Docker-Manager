@@ -440,10 +440,8 @@ func GetAllDocker() {
 	for _, cdb := range containersDB {
 		docker, exists := containersDocker[cdb.Uuid]
 		if !exists {
-			err := CreateDocker(&cdb)
-			if err != nil {
-				panic(err)
-			}
+			err	:= repo.DeleteService(ctx, cdb.Uuid)
+			if err != nil
 			continue
 		}
 		if docker.Image == cdb.Image && docker.StartedSince == cdb.StartedSince {
