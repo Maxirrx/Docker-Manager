@@ -300,8 +300,7 @@ func WatchContainers() {
 	f.Add("event", "start")
 	f.Add("event", "stop")
 	f.Add("event", "die")
-	f.Add("event", "pause")
-	f.Add("event", "unpause")
+	f.Add("event", "starting")
 	f.Add("event", "destroy")
 
 	msgs, errs := cli.Events(context.Background(), events.ListOptions{
@@ -319,12 +318,20 @@ func WatchContainers() {
 
 			statusId := 0
 			switch msg.Action {
-			case "start", "unpause":
+			case "start":
+				statusId = 1
+			case "starting":
 				statusId = 2
 			case "stop", "pause":
 				statusId = 3
-			case "die", "destroy":
+			case "die":
 				statusId = 4
+			case "destroy":
+				err := repo.DeleteService(ctx, msg.Actor.ID)
+				if err != nil {
+					panic(err)
+				}
+				continue
 			default:
 				continue
 			}
@@ -378,7 +385,7 @@ func GetAllDocker() {
 		panic(err)
 	}
 
-	containers, err := cli.ContainerList(context.Background(), container.ListOptions{})
+	containers, err := cli.ContainerList(context.Background(), container.ListOptions{All: true})
 	if err != nil {
 		panic(err)
 	}
