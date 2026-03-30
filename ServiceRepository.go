@@ -39,8 +39,26 @@ func (r *ServiceRepository) UpdateService(ctx context.Context, service *Service)
 }
 
 func (r *ServiceRepository) DeleteService(ctx context.Context, uuid string) error {
+
+    _, err := r.DB.NewDelete().
+        Model((*Measure)(nil)).
+        Where("monitoring_service_id IN (SELECT id FROM monitorings_services WHERE service_uuid = ?)", uuid).
+        Exec(ctx)
+    if err != nil {
+        return err
+    }
+
+    _, err = r.DB.NewDelete().
+        Model((*MonitoringService)(nil)).
+        Where("service_uuid = ?", uuid).
+        Exec(ctx)
+    
+	if err != nil {
+        return err
+    }
+        
 	service := &Service{}
-	_, err := r.DB.NewDelete().
+	_, err = r.DB.NewDelete().
 		Model(service).
 		Where("uuid = ?", uuid).
 		Exec(ctx)
