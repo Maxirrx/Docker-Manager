@@ -6,17 +6,17 @@ import (
 )
 
 func main() {
+
 	db, err := ConnectDB()
-    if err != nil {
-        panic(err)
-    }
+	if err != nil {
+	    panic(err)
+	}
 	DB = db
 
 
 	GetAllDocker()
 
-	go WatchContainers()
-
+	go WatchContainers()	
 
 	mux := RegisterRoutes()
 	fmt.Println("Serveur démarré sur :8080")

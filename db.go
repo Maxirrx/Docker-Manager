@@ -12,9 +12,9 @@ var DB *bun.DB
 func ConnectDB() (*bun.DB, error) {
 
 	sqldb := sql.OpenDB(pgdriver.NewConnector(
-		pgdriver.WithDSN("postgres://user_docker:password@localhost:5432/db_api_culteur?sslmode=disable"),
+		pgdriver.WithDSN("postgres://user_docker:password@api-culteur-db:5432/db_api_culteur?sslmode=disable"),
 	))
-
+	
 	db := bun.NewDB(sqldb, pgdialect.New())
 
 	db.RegisterModel((*ServicePort)(nil))
