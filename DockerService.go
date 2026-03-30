@@ -427,12 +427,7 @@ func GetAllDocker() {
 
 		containersDocker[c.ID] = service
 	}
-	for _, cverif := range containersDocker {
-		err = repo.Create(ctx, &cverif)
-		if err != nil {
-			panic(err)
-		}
-	}
+
 
 	containersDB, err = repo.GetAllServices(ctx)
 	if err != nil {
@@ -441,11 +436,15 @@ func GetAllDocker() {
 
 	for _, cdb := range containersDB {
 		docker, exists := containersDocker[cdb.Uuid]
+
 		if !exists {
 			err	:= repo.DeleteService(ctx, cdb.Uuid)
 			if err != nil{
-			continue}
+			panic(err)
 		}
+		continue
+		}
+		delete(containersDocker, cdb.Uuid)
 		if docker.Image == cdb.Image && docker.StartedSince == cdb.StartedSince {
 			continue
 		}
@@ -455,6 +454,13 @@ func GetAllDocker() {
         	updated.StartedSince = cdb.StartedSince
     	}
 		if err := repo.UpdateService(ctx, &updated); err != nil {
+			panic(err)
+		}
+	}
+
+	for _, cverif := range containersDocker {
+		err = repo.Create(ctx, &cverif)
+		if err != nil {
 			panic(err)
 		}
 	}
