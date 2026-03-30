@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
-
 	"github.com/uptrace/bun"
+	"fmt"
 )
 
 type ServiceRepository struct {
@@ -11,11 +11,24 @@ type ServiceRepository struct {
 }
 
 func (r *ServiceRepository) Create(ctx context.Context, service *Service) error {
-	_, err := r.DB.NewInsert().
-		Model(service).
-		Exec(ctx)
+    _, err := r.DB.NewInsert().
+        Model(service).
+        Exec(ctx)
+    if err != nil {
+        return err
+    }
 
-	return err
+    monitorings := []MonitoringService{
+        {MonitoringID: 1, ServiceUUID: service.Uuid, MinValue: 0, MaxValue: 100},
+        {MonitoringID: 2, ServiceUUID: service.Uuid, MinValue: 0, MaxValue: 100},
+    }
+
+    _, err = r.DB.NewInsert().
+        Model(&monitorings).
+        Exec(ctx)
+		fmt.Println("insert monitoring err:", err)
+		fmt.Println(monitorings)
+    return err
 }
 
 func (r *ServiceRepository) UpdateService(ctx context.Context, service *Service) error {
@@ -65,7 +78,7 @@ func (r *ServiceRepository) GetAllServices(ctx context.Context) ([]Service, erro
 
 func(r *ServiceRepository) MonitoringSave(ctx context.Context, measure Measure) error {
 	_, err := r.DB.NewInsert().
-	Model(measure).
+	Model(&measure).
 	Exec(ctx)
 
 	return err
@@ -92,5 +105,5 @@ func(r *ServiceRepository) GetMonitoringID(ctx context.Context,uuidService strin
 	if err != nil {
 		return err, 0, 0
 	}
-	return nil, ram["id"].(int), cpu["id"].(int)
+	return nil, int(ram["id"].(int64)), int(cpu["id"].(int64))
 }

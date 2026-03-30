@@ -13,8 +13,15 @@ func main() {
 	}
 	DB = db
 
+	lancement := true
 
-	GetAllDocker()
+	if lancement == true{
+		GetAllDocker()
+		lancement = false
+	} 
+
+
+	
 
 	go WatchContainers()	
 

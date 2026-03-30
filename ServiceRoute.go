@@ -72,5 +72,9 @@ func serviceActionHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func serviceMonitoringHandler(w http.ResponseWriter, r *http.Request) {
-    jsonResponse(w, GetMonitoring())
+    if err := GetMonitoring(); err != nil {
+        jsonResponse(w, Result{Success: false, Message: err.Error()})
+        return
+    }
+    jsonResponse(w, Result{Success: true, Message: "monitoring sauvegardé"})
 }

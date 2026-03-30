@@ -174,40 +174,53 @@ func GetMonitoring() error {
 	repo := &ServiceRepository{DB: DB}
 	err, ram, cpu := repo.GetMonitoringID(ctx, c.ID)
 	if err != nil {
-		return err
+		continue
 	}
+
 
 	statsResponse, err := cli.ContainerStats(ctx, c.ID, false)
     if err != nil {
-        return err
+        panic(err)
     }
     defer statsResponse.Body.Close()
 
     var stats container.StatsResponse
     if err := json.NewDecoder(statsResponse.Body).Decode(&stats); err != nil {
-        return err
+        panic(err)
     }
+	cpuDelta := float64(stats.CPUStats.CPUUsage.TotalUsage - stats.PreCPUStats.CPUUsage.TotalUsage)
+	systemDelta := float64(stats.CPUStats.SystemUsage - stats.PreCPUStats.SystemUsage)
+	cpuPercent := 0.0
+	if systemDelta > 0 {
+    	cpuPercent = (cpuDelta / systemDelta) * float64(len(stats.CPUStats.CPUUsage.PercpuUsage)) * 100.0
+	}
+
 
     measureRam := Measure  {
-			ID: 1,
 			MonitoringServiceID: ram, 
 			Value:               int(stats.MemoryStats.Usage) / 1024 / 1024,
-            MeasuredAt:          time.Now().String(),
+            MeasuredAt:          time.Now().Format("2006-01-02 15:04:05"),
 	}
 	measureCpu := Measure  {
-			ID: 1,
 			MonitoringServiceID: cpu, 
-			Value:               int(stats.CPUStats.CPUUsage.TotalUsage),
-            MeasuredAt:          time.Now().String(),
+			Value:               int(cpuPercent),
+            MeasuredAt:          time.Now().Format("2006-01-02 15:04:05"),
 	}
-	fmt.Println(measureRam, measureCpu)
+	err = repo.MonitoringSave(ctx,measureRam)
+	if err != nil {
+		panic(err)
+	}
+	err = repo.MonitoringSave(ctx,measureCpu)
+	if err != nil {
+		panic(err)
+	}
     	}
 	}
 	return nil
 
 }
 
-func CreateDocker(service *Service) error {
+func CreateDocker(service *Service) error  {
 	repo := &ServiceRepository{DB: DB}
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
@@ -277,6 +290,7 @@ func CreateDocker(service *Service) error {
 	if err := repo.Create(ctx, service); err != nil {
 		return err
 	}
+
 
 	return nil
 }
@@ -386,25 +400,60 @@ func GetAllDocker() {
             continue
         }
 
+		var ports []Port
+
+		for _, port := range c.Ports{
+			var p = Port {
+				ID: 0,
+				Libelle: fmt.Sprintf("%d:%d", port.PublicPort, port.PrivatePort),
+			}
+			ports = append(ports, p)
+		}
+
+		inspect, err := cli.ContainerInspect(context.Background(), c.ID)
+if err != nil {
+    continue
+}
+
+debut := time.Now().Format("2006-01-02 15:04:05")
+if inspect.State.StartedAt != "" {
+    t, err := time.Parse(time.RFC3339Nano, inspect.State.StartedAt)
+    if err == nil {
+        debut = t.Format("2006-01-02 15:04:05")
+    }
+}
+
         projectId := 0
         if val, ok := c.Labels["project"]; ok {
             projectId, _ = strconv.Atoi(val)
         }
-
+		fmt.Println(c.Ports)
         containersDocker[c.ID] = Service{
             Uuid:         c.ID,
             Image:        c.Image,
-            StartedSince: time.Unix(c.Created, 0).Format("2006-01-02 15:04:05"),
+            StartedSince: debut,
             Name:         c.Names[0],
             ProjectId:    projectId,
-			StatusId: 1,
+			StatusId: 		1,
+			Ports: ports,	
+				
         }
     }
+
+	containersDB, err = repo.GetAllServices(ctx)
+    if err != nil {
+        panic(err)
+    }
+
 
     for _, cdb := range containersDB {
         docker, exists := containersDocker[cdb.Uuid]
         if !exists {
-            continue
+            err := CreateDocker(&cdb)
+			if err != nil {
+				panic(err)
+			}
+			continue
         }
 
         if docker.Image == cdb.Image && docker.StartedSince == cdb.StartedSince {
@@ -416,21 +465,5 @@ func GetAllDocker() {
             panic(err)
         }
     }
-	for uuid, docker := range containersDocker {
-   		found := false
-   		for _, cdb := range containersDB {
-   		    if cdb.Uuid == uuid {
-   		        found = true
-   		        break
-   		    }
-   		}
 
-   		if !found {
-   		    newService := docker
-   		    if err := repo.Create(ctx, &newService); err != nil {
-   		        panic(err)
-   		    }
-   		}
-	}
-    fmt.Println(containersDB)
 }
