@@ -55,3 +55,31 @@ func DeleteService(uuid string) Result {
 		Message: "Le service a bien été remove",
 	}
 }
+
+func CreateService(service Service) Result {
+	err := CreateDocker(&service)
+		if err != nil {
+		return Result{
+			Success: false,
+			Message: err.Error(),
+		}
+	}
+	return Result{
+		Success: true,
+		Message: "Le service a bien été créate",
+	}
+}
+
+func Monitoring() Result {
+	err := GetMonitoring()
+		if err != nil {
+		return Result{
+			Success: false,
+			Message: err.Error(),
+		}
+	}
+	return Result{
+		Success: true,
+		Message: "Le monitoring a bien été mis a jour",
+	}
+}

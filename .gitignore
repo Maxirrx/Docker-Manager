@@ -19,3 +19,5 @@ go.work
 
 # OS
 .DS_Store
+pkg/mod/
+pkg/sumdb/

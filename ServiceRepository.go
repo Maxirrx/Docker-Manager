@@ -21,13 +21,16 @@ func (r *ServiceRepository) Create(ctx context.Context, service *Service) error 
 func (r *ServiceRepository) UpdateService(ctx context.Context, service *Service) error {
 	_, err := r.DB.NewUpdate().
 		Model(service).
+		Where("uuid = ?", service.Uuid). 
 		Exec(ctx)
 
 	return err
 }
 
 func (r *ServiceRepository) DeleteService(ctx context.Context, uuid string) error {
+	service := &Service{}
 	_, err := r.DB.NewDelete().
+		Model(service).
 		Where("uuid = ?", uuid).
 		Exec(ctx)
 
@@ -47,7 +50,7 @@ func (r *ServiceRepository) FindServiceByUUID(ctx context.Context, uuid string) 
 	return service, nil
 }
 
-func (r *ServiceRepository) GetAllService(ctx context.Context) ([]Service, error) {
+func (r *ServiceRepository) GetAllServices(ctx context.Context) ([]Service, error) {
 	services := []Service{}
 
 	err := r.DB.NewSelect().

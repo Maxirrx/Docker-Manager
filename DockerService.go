@@ -3,7 +3,11 @@ package main
 import (
 	"context"
 
+	"strings"
 
+    "io"
+	"github.com/docker/docker/api/types/image"
+	"github.com/docker/go-connections/nat"
 	//"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/events"
@@ -12,6 +16,7 @@ import (
 	"fmt"
 	"time"
 	"encoding/json"
+	"strconv"
 )
 
 
@@ -43,7 +48,7 @@ func StartDocker(uuid string) error{
 		return err
 	}
 
-	var repo ServiceRepository
+	repo := &ServiceRepository{DB: DB}
 	service, err := repo.FindServiceByUUID(ctx, uuid)
 	if err != nil {
 	    return err
@@ -77,7 +82,7 @@ func RestartDocker(uuid string) error{
 		return err
 	}
 
-	var repo ServiceRepository
+	repo := &ServiceRepository{DB: DB}
 	service, err := repo.FindServiceByUUID(ctx, uuid)
 	if err != nil {
 	    return err
@@ -110,7 +115,7 @@ func StopDocker(uuid string) error{
 		return err
 	}
 	
-	var repo ServiceRepository
+	repo := &ServiceRepository{DB: DB}
 	service, err := repo.FindServiceByUUID(ctx, uuid)
 	if err != nil {
 	    return err
@@ -139,12 +144,13 @@ func DeleteDocker(uuid string) error{
 	if containerInfo.Config.Labels["CssSexy"] != "true"{
 		return fmt.Errorf("ce conteneur n'appartient pas a CSSSexy")
 	}
+	StopDocker(uuid)
 	err = cli.ContainerRemove(ctx, uuid, container.RemoveOptions{})
 	if err != nil {
 		return err
 	}
 	StopDocker(uuid)	
-	var repo ServiceRepository
+	repo := &ServiceRepository{DB: DB}
 	err = repo.DeleteService(ctx, uuid)
 	if err != nil {
 	    return err
@@ -165,7 +171,7 @@ func GetMonitoring() error {
 	}
 	for _, c := range containers{
     if _, ok := c.Labels["CssSexy"]; ok{
-	var repo ServiceRepository
+	repo := &ServiceRepository{DB: DB}
 	err, ram, cpu := repo.GetMonitoringID(ctx, c.ID)
 	if err != nil {
 		return err
@@ -201,163 +207,230 @@ func GetMonitoring() error {
 
 }
 
-
-
-//func GetMonitoringg() error {
-//	cli, err := NewDockerClient()
-//	if err != nil {
-//		return err
-//	}
-//
-//	containers, err := cli.ContainerList(context.Background(), types.ContainerListOptions{})
-//	if err != nil {
-//		return err
-//	}
-//
-//	re := regexp.MustCompile(`^coucou`)
-//
-//	serviceRepo := ServiceRepository{DB: DB}
-//
-//	for _, container := range containers {
-//
-//		match := false
-//		for key := range container.Labels {
-//			if re.MatchString(key) {
-//				match = true
-//				break
-//			}
-//		}
-//		if !match {
-//			continue
-//		}
-//
-//		service, err := serviceRepo.FindServiceByUUID(context.Background(), container.ID)
-//		if err != nil {
-//			fmt.Println("service not found:", err)
-//			continue
-//		}
-//
-//		stats, err := cli.ContainerStats(context.Background(), container.ID, false)
-//		if err != nil {
-//			fmt.Println("stats error:", err)
-//			continue
-//		}
-//
-//		var data types.StatsJSON
-//		if err := json.NewDecoder(stats.Body).Decode(&data); err != nil {
-//			fmt.Println("decode error:", err)
-//			stats.Body.Close()
-//			continue
-//		}
-//		stats.Body.Close()
-//
-//		now := time.Now()
-//
-//		cpu := int(data.CPUStats.CPUUsage.TotalUsage)
-//
-//		mem := int(data.MemoryStats.Usage / 1024 / 1024)
-//
-//		err = MonitoringSave(Measure{
-//			MonitoringServiceID: service.ID,
-//			Value:               cpu,
-//			MeasuredAt:          now,
-//		})
-//		if err != nil {
-//			fmt.Println("save cpu:", err)
-//		}
-//
-//		err = MonitoringSave(Measure{
-//			MonitoringServiceID: service.ID,
-//			Value:               mem,
-//			MeasuredAt:          now,
-//		})
-//		if err != nil {
-//			fmt.Println("save mem:", err)
-//		}
-//	}
-//
-//	return nil
-//}
-//
-
-func WatchContainers(repo *ServiceRepository) error{
+func CreateDocker(service *Service) error {
+	repo := &ServiceRepository{DB: DB}
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		return err
 	}
-f := filters.NewArgs()
-f.Add("type", "container")
-f.Add("event", "die")
-f.Add("event", "stop")
-f.Add("event", "start")
 
-msgs, errs := cli.Events(context.Background(), events.ListOptions{
-	Filters: f,
-})
 	ctx := context.Background()
 
-	for {
-		select {
-		case msg := <-msgs:
-
-			if _, ok := msg.Actor.Attributes["CSSexy"]; ok {
-
-				service, err := repo.FindServiceByUUID(ctx, msg.ID)
-				if err != nil {
-					return err
-					continue
-					}
-
-					service.StatusId = 4
-
-					err = repo.UpdateService(ctx, service)
-					if err != nil {
-						return err
-				}
-			}
-
-		case err := <-errs:
-			return err
-		}
+	reader, err := cli.ImagePull(ctx, service.Image, image.PullOptions{})
+	if err != nil {
+		return err
 	}
+	defer reader.Close()
+	io.Copy(io.Discard, reader)
+	
+	exposedPorts := nat.PortSet{}
+	portBindings := nat.PortMap{}
+
+	for _, sp := range service.Ports {
+	    parts := strings.Split(sp.Libelle, ":")
+	    if len(parts) != 2 {
+	        return fmt.Errorf("format de port invalide: %s", sp.Libelle)
+	    }
+	    hostPort := parts[0]
+	    containerPort := parts[1]
+
+	    port, err := nat.NewPort("tcp", containerPort)
+	    if err != nil {
+	        return err
+	    }
+	    exposedPorts[port] = struct{}{}
+	    portBindings[port] = []nat.PortBinding{
+	        {HostIP: "0.0.0.0", HostPort: hostPort},
+	    }
+	}
+
+	resp, err := cli.ContainerCreate(
+		ctx,
+		&container.Config{
+			Image:        service.Image,
+			ExposedPorts: exposedPorts,
+			Labels: map[string]string{
+				"CssSexy": "true",
+				"project": strconv.Itoa(service.ProjectId),
+			},
+		},
+		&container.HostConfig{
+			PortBindings: portBindings,
+		},
+		nil,
+		nil,
+		service.Name,
+	)
+	if err != nil {
+		return err
+	}
+
+	err = cli.ContainerStart(ctx, resp.ID, container.StartOptions{})
+	if err != nil {
+		return err
+	}
+
+	service.Uuid = resp.ID
+	service.StartedSince = time.Now().Format("2006-01-02 15:04:05")
+	service.StatusId = 2
+
+	if err := repo.Create(ctx, service); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 
-func GetAllDocker()  {
-	cli, err := NewDockerClient()
-	if err != nil {
-		panic(err)
-	}
+func WatchContainers() {
+	repo := &ServiceRepository{DB: DB}
+    cli, err := client.NewClientWithOpts(client.FromEnv)
+    if err != nil {
+        panic(err)
+    }
 
-	ctx := context.Background()
-	var repo ServiceRepository
-	containersDB, err := repo.GetAllService(ctx)
-	if err != nil{
-		panic(err)
-	}
-	var containersDocker []Service
-	containers, err := cli.ContainerList(context.Background(), container.ListOptions{})
-	if err != nil {
-		panic(err)
-	}
-	for _, c := range containers{
-    	if _, ok := c.Labels["CssSexy"]; ok{
+    f := filters.NewArgs()
+    f.Add("type", "container")
+    f.Add("event", "start")
+    f.Add("event", "stop")
+    f.Add("event", "die")
+    f.Add("event", "pause")
+    f.Add("event", "unpause")
+    f.Add("event", "destroy")
 
-			projectId := 0
-            if val, ok := c.Labels["project"]; ok {
-                projectId, _ = strconv.Atoi(val)
+    msgs, errs := cli.Events(context.Background(), events.ListOptions{
+        Filters: f,
+    })
+
+    ctx := context.Background()
+
+    for {
+        select {
+        case msg := <-msgs:
+            if _, ok := msg.Actor.Attributes["CssSexy"]; !ok {
+                continue
             }
 
-			const service = Service {
-				Uuid: c.ID,
-				Image: c.Image,
-				StartedSince : time.Unix(c.Created, 0).Format("2006-01-02 15:04:05"),
-				Name:      c.Names[0],
-                ProjectId: projectId,
+            statusId := 0
+            switch msg.Action {
+            case "start", "unpause":
+                statusId = 2 
+            case "stop", "pause":
+                statusId = 3 
+            case "die", "destroy":
+                statusId = 4 
+            default:
+                continue
+            }
+
+            service, err := repo.FindServiceByUUID(ctx, msg.Actor.ID)
+			if err != nil {
+
+				projectId := 0
+    			if val, ok := msg.Actor.Attributes["project"]; ok {
+    			    projectId, _ = strconv.Atoi(val)
+    			}
+
+				newService := Service{
+			        Uuid:      msg.Actor.ID,
+			        Name:      msg.Actor.Attributes["name"],
+			        Image:     msg.Actor.Attributes["image"],
+					StartedSince: time.Now().Format("2006-01-02 15:04:05"),
+			        ProjectId:    projectId,
+					StatusId:  statusId,
+			    }
+			    if err := repo.Create(ctx, &newService); err != nil {
+			        fmt.Println("erreur création service:", err)
+			    }
+			    continue
 			}
 
-			containersDocker = append(containersDocker, service)
-		}
+            service.StatusId = statusId
+
+            if err := repo.UpdateService(ctx, service); err != nil {
+                fmt.Println("erreur update:", err)
+                continue
+            }
+
+
+        case err := <-errs:
+            panic(err)
+        }
+    }
+}
+
+
+
+func GetAllDocker() {
+    cli, err := NewDockerClient()
+    if err != nil {
+        panic(err)
+    }
+
+    ctx := context.Background()
+    repo := &ServiceRepository{DB: DB}
+
+    containersDB, err := repo.GetAllServices(ctx)
+    if err != nil {
+        panic(err)
+    }
+
+    containers, err := cli.ContainerList(context.Background(), container.ListOptions{})
+    if err != nil {
+        panic(err)
+    }
+
+    containersDocker := make(map[string]Service)
+    for _, c := range containers {
+        if _, ok := c.Labels["CssSexy"]; !ok {
+            continue
+        }
+
+        projectId := 0
+        if val, ok := c.Labels["project"]; ok {
+            projectId, _ = strconv.Atoi(val)
+        }
+
+        containersDocker[c.ID] = Service{
+            Uuid:         c.ID,
+            Image:        c.Image,
+            StartedSince: time.Unix(c.Created, 0).Format("2006-01-02 15:04:05"),
+            Name:         c.Names[0],
+            ProjectId:    projectId,
+			StatusId: 1,
+        }
+    }
+
+    for _, cdb := range containersDB {
+        docker, exists := containersDocker[cdb.Uuid]
+        if !exists {
+            continue
+        }
+
+        if docker.Image == cdb.Image && docker.StartedSince == cdb.StartedSince {
+            continue
+        }
+
+        updated := docker 
+        if err := repo.UpdateService(ctx, &updated); err != nil {
+            panic(err)
+        }
+    }
+	for uuid, docker := range containersDocker {
+   		found := false
+   		for _, cdb := range containersDB {
+   		    if cdb.Uuid == uuid {
+   		        found = true
+   		        break
+   		    }
+   		}
+
+   		if !found {
+   		    newService := docker
+   		    if err := repo.Create(ctx, &newService); err != nil {
+   		        panic(err)
+   		    }
+   		}
 	}
-	fmt.Println(containersDocker, containersDB)
+    fmt.Println(containersDB)
 }
