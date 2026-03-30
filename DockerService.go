@@ -438,6 +438,11 @@ fmt.Println("2")
 			Ports: ports,	
 				
         }
+
+		err := repo.Create(ctx, &containersDocker[c.ID])
+		if err != nil {
+			panic(err)
+		}
     }
 
 	containersDB, err = repo.GetAllServices(ctx)
