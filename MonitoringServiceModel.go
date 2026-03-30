@@ -6,8 +6,11 @@ import (
 
 type MonitoringService struct {
 	bun.BaseModel `bun:"table:monitorings_services"`
-	MonitoringID  int    `bun:"monitoring_id"`
-	ServiceUUID   string `bun:"service_uuid"`
-	MinValue      int    `bun:"min_value"`
-	MaxValue      int    `bun:"max_value"`
+    Uuid         string `json:"uuid"`
+    Image        string `json:"image"`
+    StartedSince string `json:"started_since"`
+    Name         string `json:"name"`
+    ProjectId    int    `json:"projectid"`
+    StatusId     int    `json:"status_id"`
+    Ports        []Port `json:"ports"`
 }
