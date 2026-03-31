@@ -367,6 +367,7 @@ func WatchContainers() {
 					StatusId:     statusId,
 					Ports: ports,
 				}
+				fmt.Println(newService)
 				if err := repo.Create(ctx, &newService); err != nil {
 					fmt.Println("erreur création service:", err)
 				}

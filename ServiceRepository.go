@@ -21,7 +21,7 @@ func (r *ServiceRepository) Create(ctx context.Context, service *Service) error 
 		var portId int
 		err = r.DB.QueryRowContext(ctx,
     	"INSERT INTO ports (libelle) VALUES (?) RETURNING id",
-    	port,
+    	port.Libelle,
 		).Scan(&portId)
 		if err != nil {
 		    return err
