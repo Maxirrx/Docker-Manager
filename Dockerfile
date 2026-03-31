@@ -6,6 +6,7 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o app .
 
 FROM alpine:latest
+RUN apk add --no-cache curl
 WORKDIR /app
 COPY --from=builder /app/app .
 EXPOSE 8080

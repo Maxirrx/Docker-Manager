@@ -220,7 +220,6 @@ func GetMonitoring() error {
 }
 
 func CreateDocker(service *Service) error {
-	repo := &ServiceRepository{DB: DB}
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		return err
