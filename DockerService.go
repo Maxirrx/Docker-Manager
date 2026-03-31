@@ -166,6 +166,7 @@ func GetMonitoring() error {
 	if err != nil {
 		return err
 	}
+
 	for _, c := range containers {
 		if _, ok := c.Labels["CssSexy"]; ok {
 			repo := &ServiceRepository{DB: DB}
@@ -173,19 +174,22 @@ func GetMonitoring() error {
 			if err != nil {
 				continue
 			}
+		fmt.Println(ram)
 
 			statsResponse, err := cli.ContainerStats(ctx, c.ID, false)
 			if err != nil {
 				log.Printf("stats error: %v", err)
 				continue
 			}
-			statsResponse.Body.Close()
+			
+		fmt.Println(statsResponse)
 
 			var stats container.StatsResponse
 			if err := json.NewDecoder(statsResponse.Body).Decode(&stats); err != nil {
 				log.Printf("stats error: %v", err)
 				continue
 			}
+			statsResponse.Body.Close()
 			cpuDelta := float64(stats.CPUStats.CPUUsage.TotalUsage - stats.PreCPUStats.CPUUsage.TotalUsage)
 			systemDelta := float64(stats.CPUStats.SystemUsage - stats.PreCPUStats.SystemUsage)
 			cpuPercent := 0.0
@@ -203,6 +207,8 @@ func GetMonitoring() error {
 				Value:               int(cpuPercent),
 				MeasuredAt:          time.Now().Format("2006-01-02 15:04:05"),
 			}
+			fmt.Println(measureRam)
+
 			err = repo.MonitoringSave(ctx, measureRam)
 			if err != nil {
 				log.Printf("stats error: %v", err)
@@ -216,7 +222,6 @@ func GetMonitoring() error {
 		}
 	}
 	return nil
-
 }
 
 func CreateDocker(service *Service) error {
