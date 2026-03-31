@@ -17,6 +17,7 @@ import (
 	"github.com/docker/docker/client"
 	"strconv"
 	"time"
+	"log"
 )
 
 func NewDockerClient() (*client.Client, error) {
@@ -175,13 +176,15 @@ func GetMonitoring() error {
 
 			statsResponse, err := cli.ContainerStats(ctx, c.ID, false)
 			if err != nil {
-				panic(err)
+				log.Printf("stats error: %v", err)
+				continue
 			}
-			defer statsResponse.Body.Close()
+			statsResponse.Body.Close()
 
 			var stats container.StatsResponse
 			if err := json.NewDecoder(statsResponse.Body).Decode(&stats); err != nil {
-				panic(err)
+				log.Printf("stats error: %v", err)
+				continue
 			}
 			cpuDelta := float64(stats.CPUStats.CPUUsage.TotalUsage - stats.PreCPUStats.CPUUsage.TotalUsage)
 			systemDelta := float64(stats.CPUStats.SystemUsage - stats.PreCPUStats.SystemUsage)
@@ -202,11 +205,13 @@ func GetMonitoring() error {
 			}
 			err = repo.MonitoringSave(ctx, measureRam)
 			if err != nil {
-				panic(err)
+				log.Printf("stats error: %v", err)
+				continue
 			}
 			err = repo.MonitoringSave(ctx, measureCpu)
 			if err != nil {
-				panic(err)
+				log.Printf("stats error: %v", err)
+				continue
 			}
 		}
 	}
@@ -421,7 +426,7 @@ func GetAllDocker() {
 		if val, ok := c.Labels["project"]; ok {
 			projectId, _ = strconv.Atoi(val)
 		}
-		
+
 		service := Service{
 			Uuid:         c.ID,
 			Image:        c.Image,
@@ -435,7 +440,6 @@ func GetAllDocker() {
 		containersDocker[c.ID] = service
 	}
 
-
 	containersDB, err = repo.GetAllServices(ctx)
 	if err != nil {
 		panic(err)
@@ -445,11 +449,11 @@ func GetAllDocker() {
 		docker, exists := containersDocker[cdb.Uuid]
 
 		if !exists {
-			err	:= repo.DeleteService(ctx, cdb.Uuid)
-			if err != nil{
-			panic(err)
-		}
-		continue
+			err := repo.DeleteService(ctx, cdb.Uuid)
+			if err != nil {
+				panic(err)
+			}
+			continue
 		}
 		delete(containersDocker, cdb.Uuid)
 		if docker.Image == cdb.Image && docker.StartedSince == cdb.StartedSince {
@@ -458,8 +462,8 @@ func GetAllDocker() {
 
 		updated := docker
 		if docker.StartedSince == "" {
-        	updated.StartedSince = cdb.StartedSince
-    	}
+			updated.StartedSince = cdb.StartedSince
+		}
 		if err := repo.UpdateService(ctx, &updated); err != nil {
 			panic(err)
 		}
@@ -472,3 +476,5 @@ func GetAllDocker() {
 		}
 	}
 }
+
+

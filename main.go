@@ -20,6 +20,8 @@ func main() {
 		lancement = false
 	}
 
+
+
 	go WatchContainers()
 
 	mux := RegisterRoutes()

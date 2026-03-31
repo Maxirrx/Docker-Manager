@@ -16,6 +16,23 @@ func (r *ServiceRepository) Create(ctx context.Context, service *Service) error 
 	if err != nil {
 		return err
 	}
+	
+	for _, port := range service.Ports{
+		var portId int
+		err = r.DB.QueryRowContext(ctx,
+    	"INSERT INTO ports (libelle) VALUES (?) ON CONFLICT (libelle) DO UPDATE SET libelle = EXCLUDED.libelle RETURNING id",
+    	port,
+		).Scan(&portId)
+		if err != nil {
+		    return err
+		}
+
+		_, err = r.DB.ExecContext(ctx,
+		    "INSERT INTO services_ports (port_id, service_uuid) VALUES (?, ?)",
+		    portId, service.Uuid,
+		)
+	}
+
 
 	monitorings := []MonitoringService{
 		{MonitoringID: 1, ServiceUUID: service.Uuid, MinValue: 0, MaxValue: 100},
@@ -40,23 +57,23 @@ func (r *ServiceRepository) UpdateService(ctx context.Context, service *Service)
 
 func (r *ServiceRepository) DeleteService(ctx context.Context, uuid string) error {
 
-    _, err := r.DB.NewDelete().
-        Model((*Measure)(nil)).
-        Where("monitoring_service_id IN (SELECT id FROM monitorings_services WHERE service_uuid = ?)", uuid).
-        Exec(ctx)
-    if err != nil {
-        return err
-    }
-
-    _, err = r.DB.NewDelete().
-        Model((*MonitoringService)(nil)).
-        Where("service_uuid = ?", uuid).
-        Exec(ctx)
-    
+	_, err := r.DB.NewDelete().
+		Model((*Measure)(nil)).
+		Where("monitoring_service_id IN (SELECT id FROM monitorings_services WHERE service_uuid = ?)", uuid).
+		Exec(ctx)
 	if err != nil {
-        return err
-    }
-        
+		return err
+	}
+
+	_, err = r.DB.NewDelete().
+		Model((*MonitoringService)(nil)).
+		Where("service_uuid = ?", uuid).
+		Exec(ctx)
+
+	if err != nil {
+		return err
+	}
+
 	service := &Service{}
 	_, err = r.DB.NewDelete().
 		Model(service).
