@@ -325,7 +325,7 @@ func WatchContainers() {
 			switch msg.Action {
 			case "start":
 				statusId = 1
-			case "starting":
+			case "create":
 				statusId = 2
 			case "stop", "pause":
 				statusId = 3
