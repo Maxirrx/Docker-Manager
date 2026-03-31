@@ -20,7 +20,7 @@ func (r *ServiceRepository) Create(ctx context.Context, service *Service) error 
 	for _, port := range service.Ports{
 		var portId int
 		err = r.DB.QueryRowContext(ctx,
-    	"INSERT INTO ports (libelle) VALUES (?) ON CONFLICT (libelle) DO UPDATE SET libelle = EXCLUDED.libelle RETURNING id",
+    	"INSERT INTO ports (libelle) VALUES (?) RETURNING id",
     	port,
 		).Scan(&portId)
 		if err != nil {

@@ -227,6 +227,10 @@ func CreateDocker(service *Service) error {
 	}
 
 	ctx := context.Background()
+	_, err = repo.FindServiceByUUID(ctx, service.Uuid)
+	if err != nil {
+		return err
+	}
 
 	reader, err := cli.ImagePull(ctx, service.Image, image.PullOptions{})
 	if err != nil {
@@ -286,6 +290,8 @@ func CreateDocker(service *Service) error {
 	service.StartedSince = time.Now().Format("2006-01-02 15:04:05")
 	service.StatusId = 2
 
+	fmt.Println(service)
+
 	if err := repo.Create(ctx, service); err != nil {
 		return err
 	}
@@ -342,6 +348,21 @@ func WatchContainers() {
 			service, err := repo.FindServiceByUUID(ctx, msg.Actor.ID)
 			if err != nil {
 
+				inspect, err := cli.ContainerInspect(ctx, msg.Actor.ID)
+    		if err != nil {
+    		    fmt.Println("erreur inspect:", err)
+    		    continue
+    		}
+		
+    		var ports []Port
+    		for containerPort, bindings := range inspect.HostConfig.PortBindings {
+    		    for _, binding := range bindings {
+    		        ports = append(ports, Port{
+    		            Libelle: fmt.Sprintf("%s:%s", binding.HostPort, containerPort.Port()),
+    		        })
+    		    }
+    		}
+
 				projectId := 0
 				if val, ok := msg.Actor.Attributes["project"]; ok {
 					projectId, _ = strconv.Atoi(val)
@@ -354,6 +375,7 @@ func WatchContainers() {
 					StartedSince: time.Now().Format("2006-01-02 15:04:05"),
 					ProjectId:    projectId,
 					StatusId:     statusId,
+					Ports: ports,
 				}
 				if err := repo.Create(ctx, &newService); err != nil {
 					fmt.Println("erreur création service:", err)
