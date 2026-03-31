@@ -225,12 +225,9 @@ func CreateDocker(service *Service) error {
 	if err != nil {
 		return err
 	}
-
+	fmt.Println(service)
 	ctx := context.Background()
-	_, err = repo.FindServiceByUUID(ctx, service.Uuid)
-	if err != nil {
-		return err
-	}
+
 
 	reader, err := cli.ImagePull(ctx, service.Image, image.PullOptions{})
 	if err != nil {
@@ -289,12 +286,6 @@ func CreateDocker(service *Service) error {
 	service.Uuid = resp.ID
 	service.StartedSince = time.Now().Format("2006-01-02 15:04:05")
 	service.StatusId = 2
-
-	fmt.Println(service)
-
-	if err := repo.Create(ctx, service); err != nil {
-		return err
-	}
 
 	return nil
 }
