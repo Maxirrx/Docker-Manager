@@ -172,22 +172,20 @@ func GetMonitoring() error {
 			repo := &ServiceRepository{DB: DB}
 			err, ram, cpu := repo.GetMonitoringID(ctx, c.ID)
 			if err != nil {
-				continue
+				panic(err)
 			}
-		fmt.Println(ram)
 
 			statsResponse, err := cli.ContainerStats(ctx, c.ID, false)
 			if err != nil {
 				log.Printf("stats error: %v", err)
-				continue
+				panic(err)
 			}
 			
-		fmt.Println(statsResponse)
 
 			var stats container.StatsResponse
 			if err := json.NewDecoder(statsResponse.Body).Decode(&stats); err != nil {
 				log.Printf("stats error: %v", err)
-				continue
+				panic(err)
 			}
 			statsResponse.Body.Close()
 			cpuDelta := float64(stats.CPUStats.CPUUsage.TotalUsage - stats.PreCPUStats.CPUUsage.TotalUsage)
@@ -207,17 +205,16 @@ func GetMonitoring() error {
 				Value:               int(cpuPercent),
 				MeasuredAt:          time.Now().Format("2006-01-02 15:04:05"),
 			}
-			fmt.Println(measureRam)
 
 			err = repo.MonitoringSave(ctx, measureRam)
 			if err != nil {
 				log.Printf("stats error: %v", err)
-				continue
+				panic(err)
 			}
 			err = repo.MonitoringSave(ctx, measureCpu)
 			if err != nil {
 				log.Printf("stats error: %v", err)
-				continue
+				panic(err)
 			}
 		}
 	}
